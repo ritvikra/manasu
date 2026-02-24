@@ -1,4 +1,4 @@
-import { useRef, useEffect, KeyboardEvent, ChangeEvent } from "react";
+import { useRef, useEffect, useState, KeyboardEvent, ChangeEvent } from "react";
 
 interface Props {
   onSend: (text: string) => void;
@@ -7,8 +7,17 @@ interface Props {
   onChange: (value: string) => void;
 }
 
+type Tag = "files" | "texts" | "emails";
+
+const TAG_LABELS: Record<Tag, string> = {
+  files: "files",
+  texts: "texts",
+  emails: "emails",
+};
+
 export function InputArea({ onSend, disabled, value, onChange }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [activeTags, setActiveTags] = useState<Set<Tag>>(new Set());
 
   useEffect(() => {
     const el = textareaRef.current;
@@ -17,13 +26,37 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
   }, [value]);
 
+  const toggleTag = (tag: Tag) => {
+    setActiveTags((prev) => {
+      const next = new Set(prev);
+      if (next.has(tag)) next.delete(tag);
+      else next.add(tag);
+      return next;
+    });
+  };
+
+  const buildMessage = () => {
+    const order: Tag[] = ["files", "texts", "emails"];
+    const prefix = order
+      .filter((t) => activeTags.has(t))
+      .map((t) => `[${t}]`)
+      .join("");
+    return prefix ? `${prefix} ${value.trim()}` : value.trim();
+  };
+
+  const handleSend = () => {
+    const msg = buildMessage();
+    if (msg && !disabled) {
+      onSend(msg);
+      onChange("");
+      setActiveTags(new Set());
+    }
+  };
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (value.trim() && !disabled) {
-        onSend(value.trim());
-        onChange("");
-      }
+      handleSend();
     }
   };
 
@@ -31,12 +64,7 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
     onChange(e.target.value);
   };
 
-  const handleSendClick = () => {
-    if (value.trim() && !disabled) {
-      onSend(value.trim());
-      onChange("");
-    }
-  };
+  const canSend = (value.trim() || activeTags.size > 0) && !disabled;
 
   return (
     <div className="px-6 py-4 bg-white">
@@ -45,6 +73,29 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
           className="border border-[#E0E0DE] rounded-2xl bg-[#F7F7F5]
             focus-within:border-[#9C9C9A] transition-colors"
         >
+          {/* Tag pills row — only shown when at least one is active */}
+          {activeTags.size > 0 && (
+            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1 flex-wrap">
+              {(["files", "texts", "emails"] as Tag[])
+                .filter((t) => activeTags.has(t))
+                .map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
+                      bg-[#0A1929] text-white text-xs font-mono font-medium"
+                  >
+                    [{TAG_LABELS[tag]}]
+                    <button
+                      onClick={() => toggleTag(tag)}
+                      className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+            </div>
+          )}
+
           {/* Textarea */}
           <textarea
             ref={textareaRef}
@@ -52,7 +103,11 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             disabled={disabled}
-            placeholder="Ask a follow-up…"
+            placeholder={
+              activeTags.size > 0
+                ? "Ask a question about the selected sources…"
+                : "Message Manasu…"
+            }
             rows={1}
             className="w-full resize-none bg-transparent text-[#1C1C1E]
               placeholder-[#9C9C9A] px-4 pt-4 pb-2 text-sm outline-none
@@ -62,44 +117,41 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
 
           {/* Bottom toolbar */}
           <div className="flex items-center justify-between px-3 pb-3 pt-1">
-            {/* Left: attach button */}
+            {/* Left: connector tag toggles */}
+            <div className="flex items-center gap-1.5">
+              {(["files", "texts", "emails"] as Tag[]).map((tag) => {
+                const active = activeTags.has(tag);
+                return (
+                  <button
+                    key={tag}
+                    onClick={() => toggleTag(tag)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium
+                      border transition-colors
+                      ${
+                        active
+                          ? "bg-[#0A1929] text-white border-[#0A1929]"
+                          : "bg-transparent text-[#6B6B69] border-[#D0D0CE] hover:border-[#9C9C9A] hover:text-[#1C1C1E]"
+                      }`}
+                  >
+                    [{TAG_LABELS[tag]}]
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Right: send */}
             <button
-              className="w-8 h-8 rounded-full border border-[#D0D0CE] flex items-center justify-center
-                text-[#6B6B69] hover:bg-[#E5E5E3] hover:border-[#9C9C9A] transition-colors"
-              aria-label="Attach"
+              onClick={handleSend}
+              disabled={!canSend}
+              className="w-8 h-8 rounded-full bg-[#1C1C1E] text-white
+                flex items-center justify-center hover:bg-[#3C3C3A]
+                transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              aria-label="Send"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" />
+                <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/>
               </svg>
             </button>
-
-            {/* Right: model label + mic + send */}
-            <div className="flex items-center gap-2">
-              <span className="text-[#6B6B69] text-xs px-2.5 py-1 bg-[#EBEBEA] rounded-lg font-medium">
-                llama3.2
-              </span>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-full
-                  text-[#9C9C9A] hover:bg-[#E5E5E3] hover:text-[#1C1C1E] transition-colors"
-                aria-label="Voice input"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1-9c0-.55.45-1 1-1s1 .45 1 1v6c0 .55-.45 1-1 1s-1-.45-1-1V5zm6 6c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
-                </svg>
-              </button>
-              <button
-                onClick={handleSendClick}
-                disabled={disabled || !value.trim()}
-                className="w-8 h-8 rounded-full bg-[#1C1C1E] text-white
-                  flex items-center justify-center hover:bg-[#3C3C3A]
-                  transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                aria-label="Send"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/>
-                </svg>
-              </button>
-            </div>
           </div>
         </div>
       </div>

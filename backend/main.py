@@ -3,7 +3,7 @@ import json
 import uuid
 from typing import AsyncGenerator
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -21,6 +21,8 @@ from services.chroma_service import (
 )
 from services.ollama_service import check_ollama_health
 from services.imessage_service import is_imessage_available
+from services.mail_service import is_mail_available
+from services import document_service
 
 app = FastAPI(title="Manasu Backend", version="1.0.0")
 
@@ -185,11 +187,63 @@ async def new_chat(req: NewChatRequest):
 async def connectors_status():
     ollama = await check_ollama_health()
     imessage = is_imessage_available()
+    mail = is_mail_available()
+    docs = document_service.list_documents()
     return {
         "ollama": ollama,
         "imessage": imessage,
+        "mail": mail,
+        "documents": {"indexed": len(docs), "available": True},
         "model": ollama.get("model", "llama3.2"),
     }
+
+
+# ── Document endpoints ──────────────────────────────────────────────────────
+
+import tempfile
+import os
+
+class FolderSyncRequest(BaseModel):
+    folder_path: str
+
+
+@app.post("/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    suffix = os.path.splitext(file.filename or "")[1].lower()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+    try:
+        result = document_service.ingest_file(tmp_path)
+        # Rename stored filepath to original name in metadata (already set via ingest_file)
+        result["filename"] = file.filename
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        os.unlink(tmp_path)
+
+
+@app.get("/documents")
+async def get_documents():
+    return document_service.list_documents()
+
+
+@app.delete("/documents/{doc_id}")
+async def delete_document(doc_id: str):
+    deleted = document_service.delete_document(doc_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"status": "deleted", "doc_id": doc_id}
+
+
+@app.post("/documents/sync-folder")
+async def sync_folder(req: FolderSyncRequest):
+    try:
+        return document_service.ingest_folder(req.folder_path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # ── Settings ───────────────────────────────────────────────────────────────

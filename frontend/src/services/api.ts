@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ChatSession, ConnectorStatus, StreamEvent, Message } from "../types";
+import type { ChatSession, ConnectorStatus, StreamEvent, Message, DocumentItem } from "../types";
 
 const BASE_URL = "http://localhost:8000";
 
@@ -104,5 +104,34 @@ export async function fetchSettings(): Promise<Settings> {
 
 export async function saveSettings(settings: Partial<Settings>): Promise<Settings> {
   const res = await api.post<Settings>("/settings", settings);
+  return res.data;
+}
+
+// ── Document API ─────────────────────────────────────────────────────────────
+
+export async function fetchDocuments(): Promise<DocumentItem[]> {
+  const res = await api.get<DocumentItem[]>("/documents");
+  return res.data;
+}
+
+export async function uploadDocument(
+  file: File
+): Promise<{ doc_id: string; filename: string; chunk_count: number }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await api.post("/documents/upload", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return res.data;
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await api.delete(`/documents/${docId}`);
+}
+
+export async function syncFolder(
+  folderPath: string
+): Promise<{ indexed: number; skipped: number; errors: Array<{ file: string; error: string }> }> {
+  const res = await api.post("/documents/sync-folder", { folder_path: folderPath });
   return res.data;
 }

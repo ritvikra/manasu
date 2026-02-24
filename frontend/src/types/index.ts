@@ -21,7 +21,16 @@ export interface ConnectorStatus {
     available_models?: string[];
   };
   imessage: boolean;
+  mail: boolean;
+  documents: { indexed: number; available: boolean };
   model: string;
+}
+
+export interface DocumentItem {
+  doc_id: string;
+  filename: string;
+  chunk_count: number;
+  upload_date: string;
 }
 
 export type StreamEvent =

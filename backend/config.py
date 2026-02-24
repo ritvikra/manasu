@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+# Suppress ChromaDB telemetry errors
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+
 # iMessage
 SELF_REPLY_NUMBER = "+14804941220"
 IMESSAGE_DB_PATH = Path.home() / "Library" / "Messages" / "chat.db"
