@@ -4,17 +4,17 @@ A privacy-first Mac desktop AI assistant that reads and drafts iMessages and ema
 
 ## What It Does
 
-- Reads your recent iMessages via macOS Messages SQLite database
-- Drafts context-aware replies using a locally-running LLM that mimics your communication style
-- Sends iMessages via AppleScript automation
-- Maintains a persistent chat history using ChromaDB for semantic search
-- Runs a multi-agent LangGraph pipeline (Supervisor → Router → Drafter) to handle message classification, routing, and drafting
+- Reads your recent iMessages via macOS Messages SQLite database (the chat.db file) 
+- Drafts context-aware replies using a locally-running LLM that mimics your communication style 
+- Sends iMessages via AppleScript automation 
+- Maintains a persistent chat history using ChromaDB as the vector database for semantic search 
+- Runs a multi-agent LangGraph pipeline (Supervisor → Router → Drafter) to handle message classification, routing, and drafting 
 
 ## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Desktop Shell | Tauri 2.x (Rust) |
+| Desktop Shell | Tauri 2.0 (Rust) |
 | Frontend | React 18 + TypeScript + Vite + Tailwind CSS |
 | Backend | Python FastAPI (sidecar, port 8000) |
 | LLM | Ollama (llama3.2, local) |
@@ -28,7 +28,7 @@ A privacy-first Mac desktop AI assistant that reads and drafts iMessages and ema
 - macOS (Apple Silicon or Intel)
 - [Ollama](https://ollama.com) installed and running
 - Node.js 18+ and npm
-- Python 3.12 (recommended — 3.13+ may lack wheels for chromadb/sentence-transformers)
+- Python 3.12 (any later interferes with chromadb/sentence-transformers)
 - Rust toolchain (for Tauri desktop build only)
 
 ## Installation
@@ -81,7 +81,7 @@ npm run dev
 # opens http://localhost:1420
 ```
 
-### Frontend (full Tauri desktop app)
+### Frontend (full Tauri desktop app with better design and sizing) 
 
 ```bash
 cd frontend
