@@ -202,6 +202,10 @@ async def connectors_status():
 
 import tempfile
 import os
+import threading
+import queue
+
+from training import data_collector, mlx_trainer, gguf_converter
 
 class FolderSyncRequest(BaseModel):
     folder_path: str
@@ -263,6 +267,143 @@ async def get_settings_endpoint():
 async def update_settings_endpoint(req: SettingsRequest):
     data = {k: v for k, v in req.model_dump().items() if v is not None}
     return update_settings(data)
+
+
+# ── Fine-tuning endpoints ──────────────────────────────────────────────────
+
+class TrainRequest(BaseModel):
+    model_type: str  # "imessage" | "email"
+    iters: int = 500
+    months: int = 6
+
+
+class RegisterRequest(BaseModel):
+    model_type: str
+
+
+@app.post("/training/collect")
+async def training_collect(months: int = 6):
+    """Collect training data from iMessages and Mail.app."""
+    results = {}
+    errors = {}
+    try:
+        results["imessage"] = data_collector.collect_imessage_data(months=months)
+    except Exception as e:
+        errors["imessage"] = str(e)
+        results["imessage"] = 0
+    try:
+        results["email"] = data_collector.collect_email_data(months=months)
+    except Exception as e:
+        errors["email"] = str(e)
+        results["email"] = 0
+    return {"counts": results, "errors": errors}
+
+
+@app.get("/training/datasets/preview")
+async def training_preview():
+    """Return first 5 samples from each dataset."""
+    return {
+        "imessage": data_collector.preview_dataset("imessage"),
+        "email": data_collector.preview_dataset("email"),
+        "counts": {
+            "imessage": data_collector.dataset_count("imessage"),
+            "email": data_collector.dataset_count("email"),
+        },
+    }
+
+
+@app.get("/training/status")
+async def training_status():
+    """Return training status for each model type."""
+    return {
+        "imessage": mlx_trainer.get_status("imessage"),
+        "email": mlx_trainer.get_status("email"),
+    }
+
+
+@app.post("/training/start")
+async def training_start(req: TrainRequest):
+    """Start training via SSE — streams log lines to the client."""
+    if req.model_type not in ("imessage", "email"):
+        raise HTTPException(status_code=400, detail="model_type must be 'imessage' or 'email'")
+
+    log_queue: queue.Queue[str | None] = queue.Queue()
+
+    def run_training():
+        try:
+            mlx_trainer.train(
+                model_type=req.model_type,
+                on_progress=lambda line: log_queue.put(line),
+                iters=req.iters,
+            )
+        except Exception as e:
+            log_queue.put(f"[manasu] ERROR: {e}")
+        finally:
+            log_queue.put(None)  # sentinel
+
+    thread = threading.Thread(target=run_training, daemon=True)
+    thread.start()
+
+    async def event_stream():
+        loop = asyncio.get_event_loop()
+        while True:
+            line = await loop.run_in_executor(None, log_queue.get)
+            if line is None:
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+                break
+            yield f"data: {json.dumps({'type': 'log', 'content': line})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/training/register")
+async def training_register(req: RegisterRequest):
+    """Fuse adapter + convert to GGUF + register with Ollama via SSE."""
+    if req.model_type not in ("imessage", "email"):
+        raise HTTPException(status_code=400, detail="model_type must be 'imessage' or 'email'")
+
+    log_queue: queue.Queue[str | None] = queue.Queue()
+    result_holder: dict = {}
+
+    def run_register():
+        try:
+            name = gguf_converter.register(
+                model_type=req.model_type,
+                on_progress=lambda line: log_queue.put(line),
+            )
+            result_holder["model_name"] = name
+        except Exception as e:
+            log_queue.put(f"[manasu] ERROR: {e}")
+            # Provide manual fallback template
+            template = gguf_converter.get_modelfile_template(req.model_type)
+            log_queue.put(f"[manasu] Manual Modelfile template:\n{template}")
+        finally:
+            log_queue.put(None)
+
+    thread = threading.Thread(target=run_register, daemon=True)
+    thread.start()
+
+    async def event_stream():
+        loop = asyncio.get_event_loop()
+        while True:
+            line = await loop.run_in_executor(None, log_queue.get)
+            if line is None:
+                payload = {"type": "done"}
+                if result_holder.get("model_name"):
+                    payload["model_name"] = result_holder["model_name"]
+                yield f"data: {json.dumps(payload)}\n\n"
+                break
+            yield f"data: {json.dumps({'type': 'log', 'content': line})}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 # ── Health check ───────────────────────────────────────────────────────────

@@ -17,6 +17,12 @@ MODEL = "llama3.2"
 # ChromaDB
 CHROMA_DIR = Path.home() / ".manasu" / "chroma"
 
+# Fine-tuning
+ADAPTERS_DIR = Path.home() / ".manasu" / "adapters"
+DATASETS_DIR = Path.home() / ".manasu" / "datasets"
+
 # Ensure dirs exist
 TEMP_DIR.mkdir(parents=True, exist_ok=True)
 CHROMA_DIR.mkdir(parents=True, exist_ok=True)
+ADAPTERS_DIR.mkdir(parents=True, exist_ok=True)
+DATASETS_DIR.mkdir(parents=True, exist_ok=True)

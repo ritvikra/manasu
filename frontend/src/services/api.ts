@@ -135,3 +135,119 @@ export async function syncFolder(
   const res = await api.post("/documents/sync-folder", { folder_path: folderPath });
   return res.data;
 }
+
+// ── Training API ──────────────────────────────────────────────────────────────
+
+export interface TrainingCounts {
+  imessage: number;
+  email: number;
+}
+
+export interface DatasetPreview {
+  imessage: Array<{ instruction: string; output: string }>;
+  email: Array<{ instruction: string; output: string }>;
+  counts: TrainingCounts;
+}
+
+export interface TrainingStatus {
+  imessage: "idle" | "training" | "done" | "error";
+  email: "idle" | "training" | "done" | "error";
+}
+
+export async function collectTrainingData(
+  months = 6
+): Promise<{ counts: TrainingCounts; errors: Record<string, string> }> {
+  const res = await api.post(`/training/collect?months=${months}`);
+  return res.data;
+}
+
+export async function fetchDatasetPreview(): Promise<DatasetPreview> {
+  const res = await api.get<DatasetPreview>("/training/datasets/preview");
+  return res.data;
+}
+
+export async function fetchTrainingStatus(): Promise<TrainingStatus> {
+  const res = await api.get<TrainingStatus>("/training/status");
+  return res.data;
+}
+
+export function startTraining(
+  modelType: "imessage" | "email",
+  iters: number,
+  onLog: (line: string) => void,
+  onDone: () => void
+): AbortController {
+  const controller = new AbortController();
+  fetch(`${BASE_URL}/training/start`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_type: modelType, iters }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "log") onLog(event.content);
+              else if (event.type === "done") onDone();
+            } catch { /* ignore */ }
+          }
+        }
+      }
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") onLog(`Error: ${err}`);
+    });
+  return controller;
+}
+
+export function registerModel(
+  modelType: "imessage" | "email",
+  onLog: (line: string) => void,
+  onDone: (modelName?: string) => void
+): AbortController {
+  const controller = new AbortController();
+  fetch(`${BASE_URL}/training/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model_type: modelType }),
+    signal: controller.signal,
+  })
+    .then(async (res) => {
+      const reader = res.body?.getReader();
+      if (!reader) return;
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.type === "log") onLog(event.content);
+              else if (event.type === "done") onDone(event.model_name);
+            } catch { /* ignore */ }
+          }
+        }
+      }
+    })
+    .catch((err) => {
+      if (err.name !== "AbortError") onLog(`Error: ${err}`);
+    });
+  return controller;
+}
