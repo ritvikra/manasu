@@ -5,6 +5,8 @@ import { fetchConnectorStatus } from "../services/api";
 const DEFAULT_STATUS: ConnectorStatus = {
   ollama: { running: false, model_available: false, model: "llama3.2" },
   imessage: false,
+  mail: false,
+  documents: { indexed: 0, available: false },
   model: "llama3.2",
 };
 

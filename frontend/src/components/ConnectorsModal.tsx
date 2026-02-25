@@ -18,7 +18,7 @@ function StatusDot({ ok }: { ok: boolean }) {
   return (
     <span
       className={`w-2 h-2 rounded-full flex-shrink-0 ${
-        ok ? "bg-[#16A34A]" : "bg-[#DC2626]"
+        ok ? "bg-[#22c55e]" : "bg-[#ef4444]"
       }`}
     />
   );
@@ -34,17 +34,17 @@ function StatusRow({
   detail?: string;
 }) {
   return (
-    <div className="flex items-center justify-between py-3 border-b border-[#E4E4E7] last:border-0">
+    <div className="flex items-center justify-between py-3 border-b border-[#2d2d2d] last:border-0">
       <div className="flex items-center gap-3">
         <StatusDot ok={ok} />
         <div>
-          <p className="text-[#18181B] text-sm font-medium">{label}</p>
-          {detail && <p className="text-[#71717A] text-xs mt-0.5">{detail}</p>}
+          <p className="text-white text-sm font-medium">{label}</p>
+          {detail && <p className="text-[#9ca3af] text-xs mt-0.5">{detail}</p>}
         </div>
       </div>
       <span
         className={`text-xs font-medium px-2 py-0.5 rounded ${
-          ok ? "text-[#16A34A]" : "text-[#DC2626]"
+          ok ? "text-[#22c55e]" : "text-[#ef4444]"
         }`}
       >
         {ok ? "Connected" : "Disconnected"}
@@ -151,18 +151,18 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
       className="fixed inset-0 z-50 flex items-center justify-center"
       onClick={onClose}
     >
-      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0 bg-black/60" />
       <div
-        className="relative bg-white rounded-2xl border border-[#E4E4E7]
-          w-full max-w-md mx-4 p-6 shadow-xl max-h-[90vh] overflow-y-auto"
+        className="relative bg-[#121212] rounded-2xl border border-white/[0.08]
+          w-full max-w-xl mx-6 p-8 shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto space-y-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[#18181B] text-base font-semibold">Connectors</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-white text-lg font-semibold">Connectors</h2>
           <button
             onClick={onClose}
-            className="text-[#A1A1AA] hover:text-[#18181B] transition-colors"
+            className="text-[#9ca3af] hover:text-white transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -171,7 +171,7 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
         </div>
 
         {/* Status rows */}
-        <div className="mb-4">
+        <div className="space-y-4">
           <StatusRow
             label="iMessage"
             ok={status.imessage}
@@ -205,9 +205,9 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
 
         {/* Ollama setup hint */}
         {!ollamaOk && (
-          <div className="bg-[#FAFAFA] rounded-xl p-3 mb-4 border border-[#E4E4E7]">
-            <p className="text-[#71717A] text-xs font-medium mb-1">Setup required</p>
-            <p className="text-[#18181B] text-xs font-mono">
+          <div className="bg-[#1f1f1f] rounded-xl p-4 border border-white/[0.08] space-y-1">
+            <p className="text-[#9ca3af] text-sm font-medium">Setup required</p>
+            <p className="text-white text-sm font-mono">
               {!status.ollama.running
                 ? "ollama serve"
                 : `ollama pull ${status.ollama.model}`}
@@ -216,20 +216,20 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
         )}
 
         {/* Documents section */}
-        <div className="border border-[#E4E4E7] rounded-xl overflow-hidden mb-4">
+        <div className="border border-white/[0.08] rounded-xl overflow-hidden">
           <div
-            className="flex items-center justify-between px-4 py-3 bg-[#FAFAFA] cursor-pointer"
+            className="flex items-center justify-between px-5 py-4 bg-[#1f1f1f] cursor-pointer"
             onClick={handleExpandDocs}
           >
             <div className="flex items-center gap-3">
               <span
                 className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  docsIndexed > 0 ? "bg-[#16A34A]" : "bg-[#A1A1AA]"
+                  docsIndexed > 0 ? "bg-[#22c55e]" : "bg-[#6b7280]"
                 }`}
               />
               <div>
-                <p className="text-[#18181B] text-sm font-medium">Documents (RAG)</p>
-                <p className="text-[#71717A] text-xs mt-0.5">
+                <p className="text-white text-base font-medium">Documents (RAG)</p>
+                <p className="text-[#9ca3af] text-sm mt-0.5">
                   {docsIndexed} document{docsIndexed !== 1 ? "s" : ""} indexed
                 </p>
               </div>
@@ -239,13 +239,13 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
               height="14"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="text-[#A1A1AA]"
+              className="text-[#9ca3af]"
             >
               <path d="M7 10l5 5 5-5z" />
             </svg>
           </div>
 
-          <div className="px-4 pb-4 pt-3 space-y-3">
+          <div className="px-5 pb-5 pt-4 space-y-4">
             {/* Upload */}
             <div className="flex gap-2">
               <input
@@ -259,8 +259,8 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={docsLoading}
-                className="flex-1 py-2 rounded-lg bg-[#18181B] text-white text-xs
-                  font-medium hover:bg-[#3F3F46] transition-colors disabled:opacity-50"
+                className="flex-1 py-3 rounded-lg bg-[#404040] text-white text-sm
+                  font-medium hover:bg-[#525252] transition-colors disabled:opacity-50"
               >
                 {docsLoading ? "Uploading…" : "Upload Files"}
               </button>
@@ -273,53 +273,53 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
                 value={folderPath}
                 onChange={(e) => setFolderPath(e.target.value)}
                 placeholder="~/Documents"
-                className="flex-1 px-3 py-2 rounded-lg border border-[#E4E4E7]
-                  text-xs text-[#18181B] placeholder-[#A1A1AA] outline-none
-                  focus:border-[#18181B] bg-white"
+                className="flex-1 px-4 py-3 rounded-lg border border-white/[0.08]
+                  text-sm text-white placeholder-[#6b7280] outline-none
+                  focus:border-[#404040] bg-[#1a1a1a]"
               />
               <button
                 onClick={handleSync}
                 disabled={syncLoading || !folderPath.trim()}
-                className="px-3 py-2 rounded-lg bg-[#18181B] text-white text-xs
-                  font-medium hover:bg-[#3F3F46] transition-colors disabled:opacity-50"
+                className="px-4 py-3 rounded-lg bg-[#404040] text-white text-sm
+                  font-medium hover:bg-[#525252] transition-colors disabled:opacity-50"
               >
                 {syncLoading ? "Syncing…" : "Sync"}
               </button>
             </div>
 
             {syncResult && (
-              <p className="text-[#16A34A] text-xs">{syncResult}</p>
+              <p className="text-[#22c55e] text-sm">{syncResult}</p>
             )}
             {uploadError && (
-              <p className="text-[#DC2626] text-xs">{uploadError}</p>
+              <p className="text-[#ef4444] text-sm">{uploadError}</p>
             )}
 
             {/* Docs list */}
             {docsLoaded && (
-              <div className="space-y-1 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-56 overflow-y-auto">
                 {docs.length === 0 ? (
-                  <p className="text-[#A1A1AA] text-xs text-center py-2">
+                  <p className="text-[#6b7280] text-sm text-center py-3">
                     No documents indexed yet.
                   </p>
                 ) : (
                   docs.map((doc) => (
                     <div
                       key={doc.doc_id}
-                      className="flex items-center justify-between px-2 py-1.5
-                        rounded-lg hover:bg-[#FAFAFA] group"
+                      className="flex items-center justify-between px-3 py-2
+                        rounded-lg hover:bg-[#1f1f1f] group"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="text-[#18181B] text-xs font-medium truncate">
+                        <p className="text-white text-sm font-medium truncate">
                           {doc.filename}
                         </p>
-                        <p className="text-[#A1A1AA] text-xs">
+                        <p className="text-[#9ca3af] text-xs">
                           {doc.chunk_count} chunk{doc.chunk_count !== 1 ? "s" : ""}
                         </p>
                       </div>
                       <button
                         onClick={() => handleDelete(doc.doc_id)}
                         disabled={deletingId === doc.doc_id}
-                        className="ml-2 text-[#A1A1AA] hover:text-[#DC2626]
+                        className="ml-2 text-[#9ca3af] hover:text-[#ef4444]
                           transition-colors disabled:opacity-50 flex-shrink-0"
                         title="Remove document"
                       >
@@ -332,7 +332,7 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
             )}
 
             {!docsLoaded && !docsLoading && (
-              <p className="text-[#A1A1AA] text-xs text-center py-1">
+              <p className="text-[#6b7280] text-sm text-center py-2">
                 Click header to load document list
               </p>
             )}
@@ -343,8 +343,8 @@ export function ConnectorsModal({ status, onClose, onRefresh, loading }: Props) 
         <button
           onClick={onRefresh}
           disabled={loading}
-          className="w-full py-2.5 rounded-xl bg-[#18181B] text-white text-sm
-            font-medium hover:bg-[#3F3F46] transition-colors disabled:opacity-50"
+          className="w-full py-3 rounded-xl bg-[#404040] text-white text-base
+            font-medium hover:bg-[#525252] transition-colors disabled:opacity-50"
         >
           {loading ? "Checking…" : "Refresh Status"}
         </button>

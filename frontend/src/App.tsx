@@ -35,7 +35,7 @@ export default function App() {
     sessions.find((s) => s.chat_id === activeChatId) ?? null;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F7F7F5] font-sans">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#0c0c0c] font-sans antialiased">
       {/* Sidebar — fixed width */}
       <Sidebar
         sessions={sessions}

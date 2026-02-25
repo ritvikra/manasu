@@ -3,10 +3,6 @@ from datetime import datetime
 from langchain_ollama import ChatOllama
 from langchain_core.messages import SystemMessage, HumanMessage
 from models.state import AgentState
-from agents.tools import send_imessage, send_email
-
-# Exported for supervisor's ToolNode (send operations only)
-TOOLS = [send_imessage, send_email]
 from services.settings_service import get_settings
 from services.document_service import search_documents
 from services.imessage_service import read_recent_messages
@@ -23,20 +19,16 @@ def _parse_tags(text: str) -> tuple[set[str], str]:
     """
     Extract leading tags like [files][texts][emails] from the message.
     Returns (set_of_tags, cleaned_message).
-    Tags can appear in any order, with optional spaces between them.
     """
     tags: set[str] = set()
-    # Consume tags greedily from the front
     pos = 0
     stripped = text.lstrip()
-    offset = len(text) - len(stripped)
-    pos = offset
+    pos = len(text) - len(stripped)
     while pos < len(text):
         m = _TAG_RE.match(text, pos)
         if m:
             tags.add(m.group(1).lower())
             pos = m.end()
-            # skip whitespace between tags
             while pos < len(text) and text[pos] == " ":
                 pos += 1
         else:
@@ -94,7 +86,7 @@ def _fetch_files_context(query: str) -> str:
         return f"Document search failed: {e}"
 
 
-# --- system prompt builders -----------------------------------------------
+# --- system prompts -------------------------------------------------------
 
 def _build_tagged_system(tags: set[str], contexts: dict[str, str]) -> str:
     now = datetime.now().strftime("%A, %B %d, %Y at %I:%M %p")
@@ -107,26 +99,7 @@ def _build_tagged_system(tags: set[str], contexts: dict[str, str]) -> str:
     if "files" in tags:
         lines += ["=== Relevant Document Excerpts ===", contexts.get("files", ""), ""]
 
-    lines += [
-        "Use the data above to answer the user's question.",
-        "If the user wants to SEND a message or email, use the appropriate tool.",
-        "If they want to READ or summarize, answer directly from the data above.",
-        "Be concise.",
-    ]
-
-    if "texts" in tags:
-        lines += [
-            "",
-            "TOOL: send_imessage(recipient, message)",
-            "  - Only call if user explicitly wants to send a text and provides recipient + message.",
-        ]
-    if "emails" in tags:
-        lines += [
-            "",
-            "TOOL: send_email(recipient, subject, body)",
-            "  - Only call if user explicitly wants to send an email and provides all three fields.",
-        ]
-
+    lines.append("Use the data above to answer the user's question. Be concise.")
     return "\n".join(lines)
 
 
@@ -137,24 +110,17 @@ def _build_plain_system() -> str:
 Answer the user's question directly and concisely."""
 
 
-# --- LLM singletons -------------------------------------------------------
-_llm_plain: ChatOllama | None = None
-_llm_texts: ChatOllama | None = None
-_llm_emails: ChatOllama | None = None
-_llm_both: ChatOllama | None = None
+# --- LLM singleton --------------------------------------------------------
+
+_llm: ChatOllama | None = None
 
 
-def _get_llm_plain() -> ChatOllama:
-    global _llm_plain
-    if _llm_plain is None:
+def _get_llm() -> ChatOllama:
+    global _llm
+    if _llm is None:
         s = get_settings()
-        _llm_plain = ChatOllama(model=s["model"], base_url=s["ollama_url"], temperature=s["temperature"])
-    return _llm_plain
-
-
-def _get_llm_with_tools(tools: list) -> ChatOllama:
-    s = get_settings()
-    return ChatOllama(model=s["model"], base_url=s["ollama_url"], temperature=0.1).bind_tools(tools)
+        _llm = ChatOllama(model=s["model"], base_url=s["ollama_url"], temperature=s["temperature"])
+    return _llm
 
 
 # --- node -----------------------------------------------------------------
@@ -169,10 +135,9 @@ def router_node(state: AgentState) -> AgentState:
             break
 
     tags, clean_query = _parse_tags(last_human)
+    llm = _get_llm()
 
     if not tags:
-        # Plain chat — no connectors activated
-        llm = _get_llm_plain()
         system = _build_plain_system()
         response = llm.invoke([SystemMessage(content=system)] + messages)
         return {"messages": [response]}
@@ -186,22 +151,9 @@ def router_node(state: AgentState) -> AgentState:
     if "files" in tags:
         contexts["files"] = _fetch_files_context(clean_query or last_human)
 
-    # Build system prompt
     system = _build_tagged_system(tags, contexts)
 
-    # Choose LLM: bind send tools only for the activated connectors
-    active_tools = []
-    if "texts" in tags:
-        active_tools.append(send_imessage)
-    if "emails" in tags:
-        active_tools.append(send_email)
-
-    if active_tools:
-        llm = _get_llm_with_tools(active_tools)
-    else:
-        llm = _get_llm_plain()
-
-    # Replace the tagged message with the clean query so LLM sees no raw tags
+    # Replace tagged message with clean query
     clean_messages = []
     for m in messages:
         if isinstance(m, HumanMessage) and m.content == last_human:

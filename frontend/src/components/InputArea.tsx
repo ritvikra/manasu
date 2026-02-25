@@ -10,9 +10,9 @@ interface Props {
 type Tag = "files" | "texts" | "emails";
 
 const TAG_LABELS: Record<Tag, string> = {
-  files: "files",
-  texts: "texts",
-  emails: "emails",
+  files: "Files",
+  texts: "Texts",
+  emails: "Emails",
 };
 
 export function InputArea({ onSend, disabled, value, onChange }: Props) {
@@ -67,35 +67,29 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
   const canSend = (value.trim() || activeTags.size > 0) && !disabled;
 
   return (
-    <div className="px-6 py-4 bg-white">
-      <div className="max-w-3xl mx-auto">
-        <div
-          className="border border-[#E0E0DE] rounded-2xl bg-[#F7F7F5]
-            focus-within:border-[#9C9C9A] transition-colors"
-        >
-          {/* Tag pills row — only shown when at least one is active */}
-          {activeTags.size > 0 && (
-            <div className="flex items-center gap-1.5 px-4 pt-3 pb-1 flex-wrap">
-              {(["files", "texts", "emails"] as Tag[])
-                .filter((t) => activeTags.has(t))
-                .map((tag) => (
-                  <span
-                    key={tag}
-                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md
-                      bg-[#0A1929] text-white text-xs font-mono font-medium"
-                  >
-                    [{TAG_LABELS[tag]}]
-                    <button
-                      onClick={() => toggleTag(tag)}
-                      className="ml-0.5 opacity-60 hover:opacity-100 transition-opacity leading-none"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-            </div>
-          )}
+    <div className="px-6 py-6 bg-[#0c0c0c] min-h-[33vh] flex flex-col justify-end">
+      <div className="max-w-3xl mx-auto w-full">
+        {/* Files, Emails, Texts buttons */}
+        <div className="flex items-center gap-2 mb-4">
+          {(["files", "texts", "emails"] as Tag[]).map((tag) => {
+            const active = activeTags.has(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() => toggleTag(tag)}
+                className={`px-4 py-2.5 rounded-xl text-base font-medium border transition-all duration-150 ${
+                  active
+                    ? "bg-white/[0.1] text-white border-white/[0.2]"
+                    : "bg-transparent text-[#7a7a7a] border-white/[0.08] hover:border-white/[0.15] hover:text-[#a8a8a8]"
+                }`}
+              >
+                {TAG_LABELS[tag]}
+              </button>
+            );
+          })}
+        </div>
 
+        <div className="relative flex items-center gap-3 rounded-2xl bg-white/[0.04] border border-white/[0.08] focus-within:border-white/[0.12] focus-within:ring-1 focus-within:ring-white/[0.06] transition-all duration-200 min-h-[4rem] pl-10 pr-10 py-3">
           {/* Textarea */}
           <textarea
             ref={textareaRef}
@@ -106,53 +100,38 @@ export function InputArea({ onSend, disabled, value, onChange }: Props) {
             placeholder={
               activeTags.size > 0
                 ? "Ask a question about the selected sources…"
-                : "Message Manasu…"
+                : "Ask a follow-up…"
             }
             rows={1}
-            className="w-full resize-none bg-transparent text-[#1C1C1E]
-              placeholder-[#9C9C9A] px-4 pt-4 pb-2 text-sm outline-none
-              min-h-[52px] overflow-hidden
+            className="flex-1 resize-none bg-transparent text-white px-6
+              placeholder-[#5a5a5a] text-lg outline-none
+              min-h-[2rem] overflow-hidden
               disabled:opacity-50 disabled:cursor-not-allowed"
           />
 
-          {/* Bottom toolbar */}
-          <div className="flex items-center justify-between px-3 pb-3 pt-1">
-            {/* Left: connector tag toggles */}
-            <div className="flex items-center gap-1.5">
-              {(["files", "texts", "emails"] as Tag[]).map((tag) => {
-                const active = activeTags.has(tag);
-                return (
-                  <button
-                    key={tag}
-                    onClick={() => toggleTag(tag)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-medium
-                      border transition-colors
-                      ${
-                        active
-                          ? "bg-[#0A1929] text-white border-[#0A1929]"
-                          : "bg-transparent text-[#6B6B69] border-[#D0D0CE] hover:border-[#9C9C9A] hover:text-[#1C1C1E]"
-                      }`}
-                  >
-                    [{TAG_LABELS[tag]}]
-                  </button>
-                );
-              })}
-            </div>
+          {/* Send button - inset from right */}
+          <button
+            onClick={handleSend}
+            disabled={!canSend}
+            className="flex-shrink-0 w-10 h-10 mr-2 rounded-xl bg-white text-[#0c0c0c]
+              flex items-center justify-center hover:bg-white/90
+              transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white"
+            aria-label="Send"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z" />
+            </svg>
+          </button>
+        </div>
 
-            {/* Right: send */}
-            <button
-              onClick={handleSend}
-              disabled={!canSend}
-              className="w-8 h-8 rounded-full bg-[#1C1C1E] text-white
-                flex items-center justify-center hover:bg-[#3C3C3A]
-                transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-              aria-label="Send"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/>
-              </svg>
-            </button>
-          </div>
+        {/* Model selector below input */}
+        <div className="mt-3 flex items-center justify-center">
+          <button className="flex items-center gap-1.5 text-[#5a5a5a] text-sm hover:text-[#8b8b8b] transition-colors">
+            <span>llama3.2</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>

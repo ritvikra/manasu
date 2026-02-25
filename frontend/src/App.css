@@ -15,16 +15,16 @@ body,
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: #FFFFFF;
-  color: #18181B;
+  background-color: #0c0c0c;
+  color: #ffffff;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - dark theme */
 ::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -32,10 +32,10 @@ body,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #D4D4D8;
-  border-radius: 2px;
+  background: #404040;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #A1A1AA;
+  background: #525252;
 }

@@ -47,10 +47,11 @@ def read_recent_emails(mailbox: str = "Inbox", limit: int = 5, sender_filter: st
     script = f'''
 tell application "Mail"
     set output to ""
-    set msgList to {{}}
     try
-        set theMailbox to mailbox "{safe_mailbox}" of first account
-        set msgs to messages 1 thru {safe_limit} of theMailbox
+        set allMsgs to messages of inbox
+        set msgCount to count of allMsgs
+        if msgCount > {safe_limit} then set msgCount to {safe_limit}
+        set msgs to items 1 thru msgCount of allMsgs
         repeat with msg in msgs
             {f'if (sender of msg contains "{sender_filter.replace(chr(34), chr(92)+chr(34)).lower()}") then' if sender_filter else ''}
             set msgId to message id of msg as string
